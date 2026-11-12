@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>チベット Mo 占い</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { background: radial-gradient(ellipse at top, #2d0a0a 0%, #0a0505 100%); }
+  .pellet { transition: all 0.3s ease; cursor: pointer; }
+  .pellet:hover { transform: scale(1.1); }
+  .rolling { animation: roll 0.5s ease-out; }
+  @keyframes roll { 0%{transform:rotate(0) scale(0.5);opacity:0.3} 50%{transform:rotate(180deg) scale(1.2)} 100%{transform:rotate(360deg) scale(1);opacity:1} }
+  .thangka-border { border: 2px solid; border-image: linear-gradient(45deg, #b45309, #fbbf24, #b45309) 1; }
+  .fade-in { animation: fadeIn 0.8s ease-in; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .ornament { color: #b45309; }
+</style>
+</head>
+<body class="text-amber-100 min-h-screen">
+<div class="max-w-2xl mx-auto px-4 py-8">
+  <div class="text-center mb-8">
+    <div class="text-3xl ornament mb-1">༄༅།</div>
+    <h1 class="text-3xl font-bold text-amber-500 mb-1" style="font-family:Georgia,serif;">チベット Mo 占い</h1>
+    <p class="text-amber-800 text-sm">白黒ペレット6個による伝統的なMo占い</p>
+  </div>
+
+  <!-- Instructions -->
+  <div class="bg-red-950/40 border border-amber-900/50 rounded-2xl p-5 mb-6 text-sm text-amber-300">
+    <div class="font-bold text-amber-400 mb-2">占い方</div>
+    <ol class="space-y-1 text-amber-500 text-xs">
+      <li>1. 質問を心の中に持ちましょう</li>
+      <li>2. 「投げる」ボタンを押してペレットを転がす</li>
+      <li>3. 白(1)と黒(0)の組み合わせが判断を告げます</li>
+      <li>4. 2個ずつのペアが3本の「線」を形成し、卦（トリグラム）が決まります</li>
+    </ol>
+  </div>
+
+  <!-- Pellet Area -->
+  <div class="bg-gradient-to-b from-red-950/60 to-slate-950/60 border border-amber-900/60 rounded-2xl p-6 mb-6">
+    <div class="text-center mb-4">
+      <div class="text-amber-600 text-xs mb-1">6つのペレット（白=陽/奇数・黒=陰/偶数）</div>
+      <div class="text-amber-800 text-xs">2個ずつペア → 3本の線 → トリグラム</div>
+    </div>
+
+    <div id="pellets" class="flex justify-center gap-4 mb-6">
+    </div>
+
+    <button onclick="rollAll()" class="w-full bg-gradient-to-r from-red-800 to-amber-800 hover:from-red-700 hover:to-amber-700 text-amber-100 font-bold py-3 rounded-xl text-lg transition shadow-lg">
+      ༄ 投げる ༄
+    </button>
+  </div>
+
+  <!-- Lines Display -->
+  <div id="linesDisplay" class="hidden bg-red-950/40 border border-amber-800/60 rounded-2xl p-6 mb-6 fade-in">
+    <h2 class="text-center text-amber-400 font-bold mb-4" style="font-family:Georgia,serif;">結果の卦</h2>
+    <div class="flex justify-center gap-8 mb-4">
+      <div id="line1" class="text-center"></div>
+      <div id="line2" class="text-center"></div>
+      <div id="line3" class="text-center"></div>
+    </div>
+    <div class="text-center">
+      <div id="trigramName" class="text-2xl font-bold text-amber-400 mb-1" style="font-family:Georgia,serif;"></div>
+      <div id="trigramMeaning" class="text-sm text-amber-600"></div>
+    </div>
+  </div>
+
+  <!-- Oracle Result -->
+  <div id="oracleResult" class="hidden bg-gradient-to-b from-red-950/60 to-slate-950/80 border border-amber-700/70 rounded-2xl p-6 fade-in">
+    <div class="text-center mb-5">
+      <div class="text-4xl mb-2" id="oracle-emoji"></div>
+      <div class="text-xl font-bold text-amber-400 mb-1" id="oracle-title" style="font-family:Georgia,serif;"></div>
+      <div class="text-sm text-amber-600 mb-3" id="oracle-tibetan"></div>
+    </div>
+    <div class="bg-red-900/20 rounded-xl p-4 mb-4">
+      <div class="text-sm text-amber-200 leading-relaxed" id="oracle-omen"></div>
+    </div>
+    <div class="bg-slate-900/40 rounded-xl p-4">
+      <div class="text-xs font-bold text-amber-500 mb-2">アドバイス</div>
+      <div class="text-sm text-amber-300 leading-relaxed" id="oracle-advice"></div>
+    </div>
+  </div>
+
+  <!-- Trigram Table -->
+  <div class="bg-red-950/30 border border-amber-900/40 rounded-2xl p-5 mt-6">
+    <h2 class="text-center text-amber-600 text-sm font-bold mb-3">8トリグラム参照表</h2>
+    <div id="trigramTable" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs"></div>
+  </div>
+</div>
+
+<script>
+function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+var trigrams=[
+  {id:0,name:'天 (ナムカ)',tibetan:'Nam mKha\'',symbol:'☰',lines:[1,1,1],emoji:'☸️',
+   omen:'最も吉の卦。大きな成功と幸運の兆し。思い描いていたことが実現します。積極的に動くと良い結果が得られます。',
+   advice:'この機会を最大限に活かしてください。リーダーシップを発揮し、前進することが吉です。傲慢にならず、謙虚さを忘れずに。'},
+  {id:1,name:'地 (サ)',tibetan:'Sa',symbol:'☷',lines:[0,0,0],emoji:'🏔️',
+   omen:'地の安定と母なるエネルギー。今は養いと受容の時。大きな行動より、現状を受け入れ整える時期です。',
+   advice:'焦らず着実に。他者のサポートや協力が力になります。内省と準備に時間を使いましょう。'},
+  {id:2,name:'雷 (ドルジェ)',tibetan:'rDo rJe',symbol:'☳',lines:[1,0,0],emoji:'⚡',
+   omen:'突然の変化と覚醒。予期せぬ出来事が訪れるかもしれません。しかしそれは成長の機会です。',
+   advice:'素早い行動と適応力が求められます。変化を恐れず、新しい可能性を探してください。'},
+  {id:3,name:'水 (チュ)',tibetan:'Chu',symbol:'☵',lines:[0,1,0],emoji:'💧',
+   omen:'流れる水のように困難を通り抜けます。危険が潜んでいますが、柔軟性と忍耐で乗り越えられます。',
+   advice:'無理に押し進まず、流れに従いましょう。注意深く観察し、落とし穴を避けてください。'},
+  {id:4,name:'山 (リ)',tibetan:'Ri',symbol:'☶',lines:[0,0,1],emoji:'🗻',
+   omen:'静止と瞑想の時。今は動かずに待つことが最善です。内なる知恵を深める好機です。',
+   advice:'行動よりも内省を。急がずに熟考してください。高い場所から全体を見渡す視点を持ちましょう。'},
+  {id:5,name:'風 (ルン)',tibetan:'rLung',symbol:'☴',lines:[1,1,0],emoji:'🌬️',
+   omen:'穏やかに持続する力。粘り強さと一貫性がやがて大きな実を結びます。コミュニケーションが重要です。',
+   advice:'一歩一歩着実に。誠実なコミュニケーションを大切に。急ぎ過ぎず、丁寧に進めましょう。'},
+  {id:6,name:'火 (メ)',tibetan:'Me',symbol:'☲',lines:[1,0,1],emoji:'🔥',
+   omen:'輝きと明晰さ。真実が明らかになります。情熱とエネルギーが高まっています。',
+   advice:'明確なビジョンを持って進んでください。照らし出す力を使い、真実を見極めましょう。'},
+  {id:7,name:'沢 (ドルウ)',tibetan:'mTsho',symbol:'☱',lines:[0,1,1],emoji:'🌊',
+   omen:'喜びと満足。楽しい出来事や人との繋がりが訪れます。創造的なエネルギーが高まっています。',
+   advice:'喜びを他者と分かち合いましょう。開放的で楽観的な姿勢を保ってください。'},
+];
+
+var pelletValues=[];
+
+function initPellets(){
+  var container=document.getElementById('pellets');
+  container.innerHTML='';
+  pelletValues=[];
+  for(var i=0;i<6;i++){
+    pelletValues.push(null);
+    var wrap=document.createElement('div');
+    wrap.className='flex flex-col items-center gap-1';
+    var pellet=document.createElement('div');
+    pellet.id='pellet-'+i;
+    pellet.className='w-14 h-14 rounded-full border-2 border-amber-700 bg-slate-800 flex items-center justify-center text-2xl pellet';
+    pellet.textContent='●';
+    pellet.style.color='#374151';
+    var label=document.createElement('div');
+    label.className='text-xs text-amber-700';
+    label.textContent='P'+(i+1);
+    wrap.appendChild(pellet);wrap.appendChild(label);
+    container.appendChild(wrap);
+  }
+}
+
+function rollAll(){
+  pelletValues=[];
+  for(var i=0;i<6;i++){
+    var v=Math.random()<0.5?1:0;
+    pelletValues.push(v);
+  }
+  pelletValues.forEach(function(v,i){
+    var el=document.getElementById('pellet-'+i);
+    el.classList.remove('rolling');
+    void el.offsetWidth;
+    el.classList.add('rolling');
+    el.textContent=v===1?'⚪':'⚫';
+    el.style.color=v===1?'#fbbf24':'#1f2937';
+    el.style.background=v===1?'#78350f':'#1e293b';
+    el.style.borderColor=v===1?'#f59e0b':'#374151';
+    setTimeout(function(el_,v_){
+      el_.classList.remove('rolling');
+    }.bind(null,el,v),500+i*80);
+  });
+
+  setTimeout(function(){showResult();},600);
+}
+
+function getLine(pair){
+  // Count whites in pair; odd total = yang (1), even = yin (0)
+  var sum=pair[0]+pair[1];
+  return sum%2!==0?1:0;
+}
+
+function showResult(){
+  var pair1=[pelletValues[0],pelletValues[1]];
+  var pair2=[pelletValues[2],pelletValues[3]];
+  var pair3=[pelletValues[4],pelletValues[5]];
+  var l1=getLine(pair1),l2=getLine(pair2),l3=getLine(pair3);
+  var lineArr=[l1,l2,l3];
+
+  // Show lines
+  ['line1','line2','line3'].forEach(function(id,i){
+    var el=document.getElementById(id);
+    var pair=[pair1,pair2,pair3][i];
+    var line=[l1,l2,l3][i];
+    var pairStr=pair.map(function(v){return v===1?'白':'黒';}).join('+');
+    el.innerHTML='<div class="text-xs text-amber-700 mb-1">'+escapeHtml(pairStr)+'</div>'
+      +'<div class="text-3xl">'+(line===1?'━━━━':'━ ━')+'</div>'
+      +'<div class="text-xs text-amber-500 mt-1">'+(line===1?'陽（奇）':'陰（偶）')+'</div>';
+  });
+  document.getElementById('linesDisplay').classList.remove('hidden');
+
+  // Find trigram
+  var tg=trigrams.find(function(t){return t.lines[0]===l1&&t.lines[1]===l2&&t.lines[2]===l3;});
+  if(!tg)tg=trigrams[0];
+  document.getElementById('trigramName').textContent=tg.symbol+' '+tg.name;
+  document.getElementById('trigramMeaning').textContent=tg.tibetan;
+
+  // Oracle result
+  document.getElementById('oracle-emoji').textContent=tg.emoji;
+  document.getElementById('oracle-title').textContent=tg.name;
+  document.getElementById('oracle-tibetan').textContent=tg.tibetan;
+  document.getElementById('oracle-omen').textContent=tg.omen;
+  document.getElementById('oracle-advice').textContent=tg.advice;
+  document.getElementById('oracleResult').classList.remove('hidden');
+
+  // Highlight current in table
+  document.querySelectorAll('.tg-row').forEach(function(r){r.classList.remove('bg-amber-900/40');});
+  var curRow=document.getElementById('tg-'+tg.id);
+  if(curRow){curRow.classList.add('bg-amber-900/40');}
+}
+
+// Build trigram table
+var tbl=document.getElementById('trigramTable');
+trigrams.forEach(function(t){
+  var row=document.createElement('div');
+  row.id='tg-'+t.id;
+  row.className='tg-row p-2 rounded bg-red-950/30 border border-amber-900/30 text-center';
+  var lineEl=document.createElement('div');
+  lineEl.className='text-lg mb-1';
+  lineEl.textContent=t.symbol;
+  var nameEl=document.createElement('div');
+  nameEl.className='text-amber-500 font-bold';
+  nameEl.textContent=t.name.split(' ')[0];
+  var tibEl=document.createElement('div');
+  tibEl.className='text-amber-800 text-xs';
+  tibEl.textContent=t.tibetan;
+  row.append(lineEl,nameEl,tibEl);
+  tbl.appendChild(row);
+});
+
+initPellets();
+</script>
+</body>
+</html>
